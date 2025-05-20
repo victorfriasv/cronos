@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Temporizador y Minijuego</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .timer-display, .game-time-display, #gameUserInput { /* Aplicar Roboto Mono a todos los displays de tiempo y al input del juego */
+            font-family: 'Roboto Mono', monospace;
+        }
+        .btn {
+            transition: all 0.15s ease-in-out;
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        .btn:active:not(:disabled) {
+            transform: translateY(1px);
+        }
+        .btn-primary { background-color: #3B82F6; border-color: #3B82F6; }
+        .btn-primary:hover:not(:disabled) { background-color: #2563EB; }
+        .btn-primary:focus:not(:disabled) { box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5); }
+
+        .btn-success { background-color: #10B981; border-color: #10B981; }
+        .btn-success:hover:not(:disabled) { background-color: #059669; }
+        .btn-success:focus:not(:disabled) { box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.5); }
+
+        .btn-warning { background-color: #F59E0B; border-color: #F59E0B; }
+        .btn-warning:hover:not(:disabled) { background-color: #D97706; }
+        .btn-warning:focus:not(:disabled) { box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.5); }
+
+        .btn-danger { background-color: #EF4444; border-color: #EF4444; }
+        .btn-danger:hover:not(:disabled) { background-color: #DC2626; }
+        .btn-danger:focus:not(:disabled) { box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.5); }
+
+        .btn-secondary { background-color: #6B7280; border-color: #6B7280; }
+        .btn-secondary:hover:not(:disabled) { background-color: #4B5563; }
+        .btn-secondary:focus:not(:disabled) { box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.5); }
+
+        /* Estilos para Pestañas */
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: 1px solid #D1D5DB; /* gray-300 */
+            border-bottom: none;
+            background-color: #F3F4F6; /* gray-100 */
+            margin-right: 5px;
+            border-radius: 6px 6px 0 0;
+            font-weight: 500;
+            color: #4B5563; /* gray-600 */
+        }
+        .tab-button.active {
+            background-color: #fff; /* white */
+            border-color: #D1D5DB; /* gray-300 */
+            border-bottom: 1px solid #fff;
+            color: #3B82F6; /* blue-500 */
+            font-weight: 600;
+        }
+        .tab-content {
+            display: none; /* Ocultar por defecto */
+            padding: 20px;
+            border: 1px solid #D1D5DB; /* gray-300 */
+            border-radius: 0 0 6px 6px;
+            background-color: #fff;
+        }
+        .tab-content.active {
+            display: block; /* Mostrar contenido de la pestaña activa */
+        }
+
+        /* Estilos para resaltar filas del minijuego */
+        .challenge-row.correct-row {
+            background-color: #D1FAE5; /* green-100 */
+            border-color: #10B981 !important; /* green-500 */
+        }
+        .challenge-row.incorrect-row {
+            background-color: #FEE2E2; /* red-100 */
+            border-color: #EF4444 !important; /* red-500 */
+        }
+    </style>
+</head>
+<body class="bg-slate-100 flex flex-col items-center justify-center min-h-screen p-4 selection:bg-blue-200">
+
+    <div class="bg-white shadow-2xl rounded-xl p-6 sm:p-8 md:p-10 w-full max-w-3xl"> <h1 class="text-3xl sm:text-4xl font-bold text-center text-slate-700 mb-6">Multi-Aplicación</h1>
+
+        <div class="mb-6">
+            <button class="tab-button active" onclick="openTab(event, 'timerAppTab')">Temporizador</button>
+            <button class="tab-button" onclick="openTab(event, 'minigameTab')">Minijuego de Resta</button>
+        </div>
+
+        <div id="timerAppTab" class="tab-content active">
+            <h2 class="text-2xl font-semibold text-center text-slate-600 mb-6">Temporizador Interactivo</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 text-center">
+                <div>
+                    <p class="text-sm text-slate-500 uppercase tracking-wider mb-1">Tiempo Progresivo</p>
+                    <p id="timeProgressive" class="timer-display text-5xl sm:text-6xl font-bold text-slate-800">00:00</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 uppercase tracking-wider mb-1">Tiempo Generado</p>
+                    <p id="timeGenerated" class="timer-display text-5xl sm:text-6xl font-bold text-blue-600">--:--</p>
+                </div>
+                <div id="regressiveTimerContainer">
+                    <p class="text-sm text-slate-500 uppercase tracking-wider mb-1">Tiempo Regresivo</p>
+                    <p id="timeRegressive" class="timer-display text-5xl sm:text-6xl font-bold text-slate-800">--:--</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <button id="btnGenerate" class="btn btn-primary w-full text-white font-semibold py-3 px-4 rounded-lg shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                    Generar
+                </button>
+                <button id="btnStart" class="btn btn-success w-full text-white font-semibold py-3 px-4 rounded-lg shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                    Start
+                </button>
+                <button id="btnPause" class="btn btn-warning w-full text-white font-semibold py-3 px-4 rounded-lg shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                    Pause
+                </button>
+                <button id="btnStop" class="btn btn-danger w-full text-white font-semibold py-3 px-4 rounded-lg shadow-md focus:outline-none disabled:opacity-60 disabled:cursor-not-allowed">
+                    Stop
+                </button>
+            </div>
+
+            <div class="mt-6 flex justify-center">
+                <button id="btnToggleRegressive" class="btn btn-secondary w-full sm:w-auto text-white font-semibold py-2 px-6 rounded-lg shadow-md focus:outline-none">
+                    Ocultar Regresivo
+                </button>
+            </div>
+            <p id="messageArea" class="text-center font-semibold mt-6 h-6"></p>
+        </div>
+
+        <div id="minigameTab" class="tab-content">
+            <h2 class="text-2xl font-semibold text-center text-slate-600 mb-6">Minijuego: Calcula la Diferencia</h2>
+            <div id="challengeRow" class="challenge-row grid grid-cols-1 sm:grid-cols-3 gap-4 items-center p-3 rounded-lg mb-4 border-2 border-slate-200 transition-colors duration-300">
+                <div>
+                    <p class="text-sm text-slate-500 uppercase tracking-wider mb-1 text-center">Tiempo Total</p>
+                    <p id="gameTimeTotal" class="game-time-display text-4xl font-bold text-slate-800 text-center">--:--</p>
+                </div>
+                <div>
+                    <p class="text-sm text-slate-500 uppercase tracking-wider mb-1 text-center">Tiempo Parcial</p>
+                    <p id="gameTimePartial" class="game-time-display text-4xl font-bold text-slate-800 text-center">--:--</p>
+                </div>
+                <div class="mt-4 sm:mt-0">
+                    <p class="text-sm text-slate-500 uppercase tracking-wider mb-1 text-center">Tu Respuesta</p>
+                    <input type="text" id="gameUserInput" class="text-4xl font-bold text-slate-800 text-center w-full p-2 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="0000">
+                </div>
+            </div>
+            <div class="flex justify-center mt-6">
+                <button id="btnNewChallenge" class="btn btn-primary text-white font-semibold py-2 px-6 rounded-lg shadow-md">Nuevo Desafío</button>
+            </div>
+            <p id="gameMessage" class="text-center font-semibold mt-4 h-6"></p>
+        </div>
+    </div>
+
+    <script>
+        // --- Lógica Común para Pestañas ---
+        function openTab(evt, tabName) {
+            let i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+                tabcontent[i].classList.remove("active");
+            }
+            tablinks = document.getElementsByClassName("tab-button");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].classList.remove("active");
+            }
+            document.getElementById(tabName).style.display = "block";
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+
+            // Si se abre la pestaña del minijuego y no hay un desafío, generar uno.
+            if (tabName === 'minigameTab' && gameTimeTotalEl.textContent === '--:--') {
+                generateNewChallenge();
+            }
+        }
+
+        // --- Lógica del Temporizador Interactivo (Pestaña 1) ---
+        const MIN_TIME_SECONDS_TIMER = 10;
+        const MAX_TIME_SECONDS_TIMER = 180; // 3 minutos
+
+        let generatedTimeInSeconds = 0;
+        let progressiveTimeInSeconds = 0;
+        let regressiveTimeInSeconds = 0;
+        let timerInterval = null;
+        let appState = 'INITIAL'; // INITIAL, READY, RUNNING, PAUSED, COMPLETED
+        let isRegressiveVisible = true;
+
+        const timeProgressiveEl = document.getElementById('timeProgressive');
+        const timeGeneratedEl = document.getElementById('timeGenerated');
+        const timeRegressiveEl = document.getElementById('timeRegressive');
+        const regressiveTimerContainerEl = document.getElementById('regressiveTimerContainer');
+        const messageAreaEl = document.getElementById('messageArea');
+
+        const btnGenerate = document.getElementById('btnGenerate');
+        const btnStart = document.getElementById('btnStart');
+        const btnPause = document.getElementById('btnPause');
+        const btnStop = document.getElementById('btnStop');
+        const btnToggleRegressive = document.getElementById('btnToggleRegressive');
+
+        function formatTime(totalSeconds) {
+            if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00";
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateTimerDisplays() {
+            timeProgressiveEl.textContent = formatTime(progressiveTimeInSeconds);
+            if (appState === 'INITIAL') {
+                timeGeneratedEl.textContent = '--:--';
+                timeRegressiveEl.textContent = '--:--';
+            } else {
+                timeGeneratedEl.textContent = formatTime(generatedTimeInSeconds);
+                timeRegressiveEl.textContent = formatTime(regressiveTimeInSeconds);
+            }
+        }
+
+        function updateTimerButtonStates() {
+            btnGenerate.disabled = false;
+            if (appState === 'INITIAL') {
+                btnStart.disabled = true; btnPause.disabled = true; btnStop.disabled = true;
+            } else if (appState === 'READY') {
+                btnStart.disabled = false; btnPause.disabled = true; btnStop.disabled = true;
+            } else if (appState === 'RUNNING') {
+                btnStart.disabled = true; btnPause.disabled = false; btnStop.disabled = false;
+            } else if (appState === 'PAUSED') {
+                btnStart.disabled = false; btnPause.disabled = true; btnStop.disabled = false;
+            } else if (appState === 'COMPLETED') {
+                btnStart.disabled = false; btnPause.disabled = true; btnStop.disabled = false;
+            }
+            btnToggleRegressive.disabled = false;
+        }
+        
+        function showTimerMessage(message, type = 'info') {
+            messageAreaEl.textContent = message;
+            messageAreaEl.className = 'text-center font-semibold mt-6 h-6'; // Reset classes
+            if (type === 'success') messageAreaEl.classList.add('text-green-600');
+            else if (type === 'error') messageAreaEl.classList.add('text-red-600');
+            else messageAreaEl.classList.add('text-slate-600');
+            
+            if (!(appState === 'COMPLETED' && message === '¡Tiempo completado!')) {
+                 setTimeout(() => {
+                    if (messageAreaEl.textContent === message) messageAreaEl.textContent = '';
+                }, 3000);
+            }
+        }
+
+        function timerTick() {
+            if (regressiveTimeInSeconds > 0) {
+                progressiveTimeInSeconds++;
+                regressiveTimeInSeconds--;
+            }
+            if (regressiveTimeInSeconds <= 0) {
+                progressiveTimeInSeconds = generatedTimeInSeconds;
+                regressiveTimeInSeconds = 0;
+                clearInterval(timerInterval);
+                timerInterval = null;
+                appState = 'COMPLETED';
+                showTimerMessage('¡Tiempo completado!', 'success');
+                updateTimerButtonStates();
+            }
+            updateTimerDisplays();
+        }
+
+        function handleGenerateTime() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+            generatedTimeInSeconds = Math.floor(Math.random() * (MAX_TIME_SECONDS_TIMER - MIN_TIME_SECONDS_TIMER + 1)) + MIN_TIME_SECONDS_TIMER;
+            progressiveTimeInSeconds = 0;
+            regressiveTimeInSeconds = generatedTimeInSeconds;
+            appState = 'READY';
+            showTimerMessage(`Nuevo tiempo generado: ${formatTime(generatedTimeInSeconds)}`);
+            updateTimerDisplays();
+            updateTimerButtonStates();
+        }
+
+        function handleStartTimer() {
+            if (appState === 'INITIAL') { showTimerMessage('Primero genera un tiempo.', 'error'); return; }
+            if (appState === 'COMPLETED') {
+                progressiveTimeInSeconds = 0;
+                regressiveTimeInSeconds = generatedTimeInSeconds;
+                messageAreaEl.textContent = '';
+            }
+            appState = 'RUNNING';
+            if (!timerInterval) timerInterval = setInterval(timerTick, 1000);
+            if (appState !== 'COMPLETED') showTimerMessage('Temporizador iniciado.', 'info');
+            updateTimerDisplays();
+            updateTimerButtonStates();
+        }
+
+        function handlePauseTimer() {
+            if (appState === 'RUNNING') {
+                clearInterval(timerInterval);
+                timerInterval = null;
+                appState = 'PAUSED';
+                showTimerMessage('Temporizador pausado.', 'info');
+                updateTimerButtonStates();
+            }
+        }
+
+        function handleStopTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = null;
+            progressiveTimeInSeconds = 0;
+            regressiveTimeInSeconds = generatedTimeInSeconds;
+            appState = 'READY';
+            showTimerMessage('Temporizador detenido.', 'info');
+            updateTimerDisplays();
+            updateTimerButtonStates();
+        }
+
+        function handleToggleRegressive() {
+            isRegressiveVisible = !isRegressiveVisible;
+            regressiveTimerContainerEl.classList.toggle('hidden', !isRegressiveVisible);
+            btnToggleRegressive.textContent = isRegressiveVisible ? 'Ocultar Regresivo' : 'Mostrar Regresivo';
+        }
+
+        function initTimerApp() {
+            btnGenerate.addEventListener('click', handleGenerateTime);
+            btnStart.addEventListener('click', handleStartTimer);
+            btnPause.addEventListener('click', handlePauseTimer);
+            btnStop.addEventListener('click', handleStopTimer);
+            btnToggleRegressive.addEventListener('click', handleToggleRegressive);
+            regressiveTimerContainerEl.classList.toggle('hidden', !isRegressiveVisible);
+            btnToggleRegressive.textContent = isRegressiveVisible ? 'Ocultar Regresivo' : 'Mostrar Regresivo';
+            updateTimerDisplays();
+            updateTimerButtonStates();
+        }
+
+        // --- Lógica del Minijuego de Resta (Pestaña 2) ---
+        const MIN_TIME_GAME_TOTAL = 20; // ej: 20 segundos
+        const MAX_TIME_GAME_TOTAL = 300; // ej: 5 minutos
+
+        let gameTimeTotalSecs = 0;
+        let gameTimePartialSecs = 0;
+        let gameCorrectDifferenceSecs = 0;
+
+        const gameTimeTotalEl = document.getElementById('gameTimeTotal');
+        const gameTimePartialEl = document.getElementById('gameTimePartial');
+        const gameUserInputEl = document.getElementById('gameUserInput');
+        const btnNewChallenge = document.getElementById('btnNewChallenge');
+        const gameMessageEl = document.getElementById('gameMessage');
+        const challengeRowEl = document.getElementById('challengeRow');
+
+        function generateNewChallenge() {
+            gameTimeTotalSecs = Math.floor(Math.random() * (MAX_TIME_GAME_TOTAL - MIN_TIME_GAME_TOTAL + 1)) + MIN_TIME_GAME_TOTAL;
+            gameTimePartialSecs = Math.floor(Math.random() * (gameTimeTotalSecs + 1)); // De 0 a gameTimeTotalSecs
+            gameCorrectDifferenceSecs = gameTimeTotalSecs - gameTimePartialSecs;
+
+            gameTimeTotalEl.textContent = formatTime(gameTimeTotalSecs);
+            gameTimePartialEl.textContent = formatTime(gameTimePartialSecs);
+            gameUserInputEl.value = '';
+            gameMessageEl.textContent = '';
+            challengeRowEl.classList.remove('correct-row', 'incorrect-row');
+            gameUserInputEl.disabled = false;
+            gameUserInputEl.focus();
+        }
+
+        /**
+         * Parsea la entrada del usuario (ej: "130" o "0130" o "90") a segundos.
+         * @param {string} inputStr - La cadena de entrada del usuario.
+         * @returns {number|null} - Total de segundos o null si el formato es inválido.
+         */
+        function parseUserInputToSeconds(inputStr) {
+            const cleanInput = inputStr.replace(/[^0-9]/g, ''); // Solo números
+            if (cleanInput === '') return null;
+
+            let minutes = 0;
+            let seconds = 0;
+
+            if (cleanInput.length <= 2) { // Asumir SS
+                seconds = parseInt(cleanInput, 10);
+            } else if (cleanInput.length === 3) { // Asumir MSS
+                minutes = parseInt(cleanInput.substring(0, 1), 10);
+                seconds = parseInt(cleanInput.substring(1), 10);
+            } else if (cleanInput.length >= 4) { // Asumir MMSS (tomar los primeros 4)
+                minutes = parseInt(cleanInput.substring(0, 2), 10);
+                seconds = parseInt(cleanInput.substring(2, 4), 10);
+            }
+            
+            if (isNaN(minutes) || isNaN(seconds) || seconds >= 60) {
+                 // Considerar inválido si los segundos son >= 60 después del parseo MMSS/MSS
+                 // O si el parseo falla.
+                 // Para entradas como "90" (90s), se maneja bien porque minutes es 0.
+                 if (cleanInput.length > 2 && seconds >=60) return null;
+            }
+             return (minutes * 60) + seconds;
+        }
+
+
+        function handleGameInput(event) {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                const userInputStr = gameUserInputEl.value;
+                const userTimeSecs = parseUserInputToSeconds(userInputStr);
+
+                if (userTimeSecs === null || userTimeSecs < 0) {
+                    gameMessageEl.textContent = "Formato inválido. Usa MMSS o SS.";
+                    gameMessageEl.className = 'text-center font-semibold mt-4 h-6 text-red-600';
+                    challengeRowEl.classList.remove('correct-row', 'incorrect-row');
+                    gameUserInputEl.value = userInputStr; // Mantener el valor original si es inválido
+                    return;
+                }
+                
+                // Formatear el input del usuario a MM:SS
+                gameUserInputEl.value = formatTime(userTimeSecs);
+
+                if (userTimeSecs === gameCorrectDifferenceSecs) {
+                    gameMessageEl.textContent = "¡Correcto!";
+                    gameMessageEl.className = 'text-center font-semibold mt-4 h-6 text-green-600';
+                    challengeRowEl.classList.add('correct-row');
+                    challengeRowEl.classList.remove('incorrect-row');
+                    gameUserInputEl.disabled = true; // Deshabilitar input tras respuesta correcta
+
+                    // Generar nuevo desafío después de 1 segundo
+                    setTimeout(() => {
+                        generateNewChallenge();
+                    }, 1000); // 1000 milisegundos = 1 segundo
+
+                } else {
+                    // Si la respuesta es incorrecta, no mostrar la solución.
+                    gameMessageEl.textContent = "Incorrecto. ¡Inténtalo de nuevo con otro desafío!";
+                    gameMessageEl.className = 'text-center font-semibold mt-4 h-6 text-red-600';
+                    challengeRowEl.classList.add('incorrect-row');
+                    challengeRowEl.classList.remove('correct-row');
+                }
+            }
+        }
+
+        function initMinigame() {
+            btnNewChallenge.addEventListener('click', generateNewChallenge);
+            gameUserInputEl.addEventListener('keypress', handleGameInput);
+            // Generar el primer desafío al cargar
+            // generateNewChallenge(); // Se llama al abrir la pestaña si es necesario
+        }
+
+        // --- Inicialización General ---
+        document.addEventListener('DOMContentLoaded', () => {
+            initTimerApp(); // Inicializar la app del temporizador
+            initMinigame(); // Inicializar el minijuego
+
+            // Establecer la pestaña activa por defecto (Temporizador)
+            // El HTML ya lo hace con la clase 'active', pero JS puede forzarlo si es necesario.
+            // document.querySelector('.tab-button.active').click(); // Simula clic si es necesario
+        });
+    </script>
+
+</body>
+</html>
